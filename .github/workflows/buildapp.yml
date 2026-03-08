@@ -13,7 +13,7 @@ on:
         type: string
       uyou_url:
         description: "The URL for download uYou"
-        default: "https://github.com/real-pakdragon/youtube/releases/download/v20.05.4/com.miro.uyou_3.0.4_iphoneos-arm.deb"
+        default: ""
         required: false
         type: string
       decrypted_youtube_url:
