@@ -1,6 +1,4 @@
-# Original idea by @ISnackable. Thanks to him for handling the hardest parts!
-# https://github.com/ISnackable/CercubePlus/blob/main/.github/workflows/Build.yml
-
+# .github/workflows/build.yml
 name: Build and Release uYouPlus
 
 on:
@@ -12,22 +10,22 @@ on:
         required: true
         type: string
       uyou_url:
-        description: "The URL for download uYou"
+        description: "The URL for download uYou (optional, ignored if local .deb exists)"
         default: ""
         required: false
         type: string
       decrypted_youtube_url:
-        description: "Direct URL to the decrypted YouTube ipa. The version of YouTube will be detected automatically."
+        description: "Direct URL to the decrypted YouTube IPA"
         default: ""
         required: true
         type: string
       bundle_id:
-        description: "Modify the bundle ID. Not recommended"
+        description: "Modify the bundle ID (optional)"
         default: "com.google.ios.youtube"
         required: true
         type: string
       app_name:
-        description: "Modify the name of the app on the Home Screen. Not recommended"
+        description: "Modify the name of the app on Home Screen (optional)"
         default: "YouTube"
         required: true
         type: string
@@ -110,12 +108,11 @@ jobs:
           submodules: recursive
 
       - name: Install Theos Jailed
-        run: |
-          ./theos-jailed/install
+        run: ./theos-jailed/install
         env:
           THEOS: ${{ github.workspace }}/theos
 
-      - name: Prepare YouTube iPA
+      - name: Prepare YouTube IPA
         id: prepare_youtube
         run: |
           wget "$YOUTUBE_URL" --no-verbose -O main/YouTube.ipa
@@ -126,7 +123,6 @@ jobs:
           echo "==> YouTube v$youtube_version downloaded!"
           sed -i '' "17s#.*#YOUTUBE_VERSION = ${youtube_version}#g" Makefile
           echo "youtube_version=${youtube_version}" >> $GITHUB_OUTPUT
-
         env:
           THEOS: ${{ github.workspace }}/theos
           YOUTUBE_URL: ${{ inputs.decrypted_youtube_url }}
@@ -136,8 +132,26 @@ jobs:
         run: |
           mkdir -p theos/lib/iphone/rootless
           cd ${{ github.workspace }}/main
+
+          # Set bundle ID and display name
           sed -i '' "27s#.*#BUNDLE_ID = ${{ env.BUNDLE_ID }}#g" Makefile
           sed -i '' "26s#.*#DISPLAY_NAME = ${{ env.APP_NAME }}#g" Makefile
+
+          # Use local uYou .deb if it exists
+          UYOU_DEB="Tweaks/uYou/com.miro.uyou_${{ env.UYOU_VERSION }}_iphoneos-arm.deb"
+          if [[ -f "$UYOU_DEB" ]]; then
+            echo "Using local uYou .deb: $UYOU_DEB"
+          else
+            if [[ -n "${{ env.UYOU_URL }}" ]]; then
+              echo "Downloading uYou .deb from URL..."
+              wget "${{ env.UYOU_URL }}" -O "$UYOU_DEB"
+            else
+              echo "ERROR: uYou .deb not found and no download URL provided!"
+              exit 1
+            fi
+          fi
+
+          # Build the package
           make package THEOS_PACKAGE_SCHEME=rootless IPA=Payload/YouTube.app FINALPACKAGE=1
           echo "package=$(ls -t packages | head -n1)" >>$GITHUB_OUTPUT
           echo -e "==> \033[1mSHASUM256: $(shasum -a 256 packages/*.ipa | cut -f1 -d' ')\033[0m"
