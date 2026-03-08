@@ -10,8 +10,8 @@ on:
         required: true
         type: string
       uyou_url:
-        description: "The URL for download uYou (optional, ignored if local .deb exists)"
-        default: "Tweaks/uYou/com.miro.uyou_3.0.4_iphoneos-arm.deb"
+        description: "The URL for download uYou (optional, uses repo file if empty)"
+        default: ""
         required: false
         type: string
       decrypted_youtube_url:
@@ -137,18 +137,16 @@ jobs:
           sed -i '' "27s#.*#BUNDLE_ID = ${{ env.BUNDLE_ID }}#g" Makefile
           sed -i '' "26s#.*#DISPLAY_NAME = ${{ env.APP_NAME }}#g" Makefile
 
-          # Use local uYou .deb if it exists
+          # Use uYou .deb from repo if URL is empty
           UYOU_DEB="Tweaks/uYou/com.miro.uyou_${{ env.UYOU_VERSION }}_iphoneos-arm.deb"
           if [[ -f "$UYOU_DEB" ]]; then
-            echo "Using local uYou .deb: $UYOU_DEB"
+            echo "Using uYou .deb from repo: $UYOU_DEB"
+          elif [[ -n "${{ env.UYOU_URL }}" ]]; then
+            echo "Downloading uYou .deb from URL..."
+            wget "${{ env.UYOU_URL }}" -O "$UYOU_DEB"
           else
-            if [[ -n "${{ env.UYOU_URL }}" ]]; then
-              echo "Downloading uYou .deb from URL..."
-              wget "${{ env.UYOU_URL }}" -O "$UYOU_DEB"
-            else
-              echo "ERROR: uYou .deb not found and no download URL provided!"
-              exit 1
-            fi
+            echo "ERROR: uYou .deb not found in repo and no download URL provided!"
+            exit 1
           fi
 
           # Build the package
