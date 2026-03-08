@@ -11,7 +11,7 @@ on:
         type: string
       uyou_url:
         description: "The URL for download uYou (optional, ignored if local .deb exists)"
-        default: ""
+        default: "Tweaks/uYou/com.miro.uyou_3.0.4_iphoneos-arm.deb"
         required: false
         type: string
       decrypted_youtube_url:
